@@ -1,20 +1,16 @@
 from airflow import DAG
+from airflow.operators.dummy import DummyOperator
 from airflow.providers.databricks.operators.databricks import (
-    DatabricksSubmitRunOperator,
     DatabricksRunNowOperator,
 )
 from datetime import datetime, timedelta
 
-# Define params for Submit Run Operator
-new_cluster = {
-    "spark_version": "7.3.x-scala2.12",
-    "num_workers": 2,
-    "node_type_id": "i3.xlarge",
-}
+"""
+SUCCESS SCENARIO.
+- It will run the job_id=14, that is already created in databricks.
+- Basically, it will trigger what that job is supposed to do (that is, run a notebook)
+"""
 
-notebook_task = {
-    "notebook_path": "/Users/ExampleUser/Quickstart_Notebook",
-}
 
 # Define params for Run Now Operator
 notebook_params = {"Variable": 5}
@@ -28,23 +24,20 @@ with DAG(
     default_args={
         "email_on_failure": False,
         "email_on_retry": False,
-        "retries": 1,
         "retry_delay": timedelta(minutes=2),
     },
 ) as dag:
 
-    opr_submit_run = DatabricksSubmitRunOperator(
-        task_id="submit_run",
-        databricks_conn_id="databricks",
-        new_cluster=new_cluster,
-        notebook_task=notebook_task,
+    t0 = DummyOperator(
+        task_id='start'
     )
 
     opr_run_now = DatabricksRunNowOperator(
         task_id="run_now",
         databricks_conn_id="databricks",
-        job_id=5,
+        job_id=14,
         notebook_params=notebook_params,
     )
 
-    opr_submit_run >> opr_run_now
+
+    t0 >> opr_run_now
